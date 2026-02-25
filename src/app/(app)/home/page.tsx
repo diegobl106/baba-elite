@@ -43,7 +43,6 @@ function initials(nome?: string) {
 }
 
 function monthLabel(ym: string) {
-  // "2026-01" -> "Jan/2026"
   const [y, m] = (ym || "").split("-")
   const names = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
   const idx = Math.max(0, Math.min(11, Number(m) - 1))
@@ -63,12 +62,6 @@ function toNum(v: any, fallback = 0) {
   return Number.isFinite(n) ? n : fallback
 }
 
-/**
- * Upload simples no Cloudinary (FREE) usando preset unsigned.
- * Precisa no .env:
- * NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
- * NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=
- */
 async function uploadImageToCloudinary(file: File): Promise<string> {
   const cloudName = (process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "").trim()
   const uploadPreset = (process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "").trim()
@@ -116,13 +109,14 @@ export default function HomePage() {
     [players, selectedId]
   )
 
-  const [edit, setEdit] = useState<PlayerInput>({
+  const [edit, setEdit] = useState<any>({
     nome: "",
     email: "",
     posicao: "",
     caracteristica: "",
     overall: 0,
     jogos: 0,
+    vitorias: 0, // ✅ NOVO
     gols: 0,
     assistencias: 0,
   })
@@ -142,7 +136,6 @@ export default function HomePage() {
     try {
       const list = await listPlayersByName()
       setPlayers(list)
-      // se o selecionado foi deletado, limpa
       if (selectedId && !list.some((p) => p.id === selectedId)) {
         setSelectedId("")
       }
@@ -161,7 +154,6 @@ export default function HomePage() {
     }
   }
 
-  // Carrega home conforme tipo de usuário
   useEffect(() => {
     const run = async () => {
       if (authLoading) return
@@ -171,7 +163,6 @@ export default function HomePage() {
         return
       }
 
-      // ✅ Se for ADM: não tenta buscar player dele por email (pode nem existir)
       if (admin) {
         setPlayer(null)
         setLoadingPlayer(false)
@@ -179,7 +170,6 @@ export default function HomePage() {
         return
       }
 
-      // ✅ Jogador normal
       setLoadingPlayer(true)
       try {
         const p = await getPlayerByEmail(normalizeEmail(user.email))
@@ -193,7 +183,6 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user?.email, admin])
 
-  // Quando seleciona um jogador no painel, carrega formulário e meses
   useEffect(() => {
     if (!admin) return
     if (!selectedPlayer) {
@@ -204,6 +193,7 @@ export default function HomePage() {
         caracteristica: "",
         overall: 0,
         jogos: 0,
+        vitorias: 0, // ✅ NOVO
         gols: 0,
         assistencias: 0,
       })
@@ -215,9 +205,10 @@ export default function HomePage() {
       nome: selectedPlayer.nome || "",
       email: selectedPlayer.email || "",
       posicao: selectedPlayer.posicao || "",
-      caracteristica: selectedPlayer.caracteristica || "",
+      caracteristica: (selectedPlayer as any).caracteristica || "",
       overall: toNum(selectedPlayer.overall),
       jogos: toNum(selectedPlayer.jogos),
+      vitorias: toNum((selectedPlayer as any).vitorias), // ✅ NOVO
       gols: toNum(selectedPlayer.gols),
       assistencias: toNum(selectedPlayer.assistencias),
     })
@@ -230,11 +221,12 @@ export default function HomePage() {
     try {
       if (!admin) return
 
-      const payload: PlayerInput = {
+      const payload: any = {
         ...edit,
         email: normalizeEmail(edit.email),
         overall: toNum(edit.overall),
         jogos: toNum(edit.jogos),
+        vitorias: toNum(edit.vitorias), // ✅ NOVO
         gols: toNum(edit.gols),
         assistencias: toNum(edit.assistencias),
       }
@@ -242,7 +234,7 @@ export default function HomePage() {
       if (!payload.nome.trim()) return alert("Digite o nome do jogador.")
       if (!payload.email.trim()) return alert("Digite o email do jogador.")
 
-      const id = await createPlayer(payload)
+      const id = await createPlayer(payload as PlayerInput)
       alert("✅ Jogador criado!")
       await reloadPlayers()
       setSelectedId(id)
@@ -257,11 +249,12 @@ export default function HomePage() {
       if (!admin) return
       if (!selectedPlayer) return alert("Selecione um jogador primeiro.")
 
-      const payload: PlayerInput = {
+      const payload: any = {
         ...edit,
         email: normalizeEmail(edit.email),
         overall: toNum(edit.overall),
         jogos: toNum(edit.jogos),
+        vitorias: toNum(edit.vitorias), // ✅ NOVO
         gols: toNum(edit.gols),
         assistencias: toNum(edit.assistencias),
       }
@@ -269,7 +262,7 @@ export default function HomePage() {
       if (!payload.nome.trim()) return alert("Digite o nome do jogador.")
       if (!payload.email.trim()) return alert("Digite o email do jogador.")
 
-      await updatePlayer(selectedPlayer.id, payload)
+      await updatePlayer(selectedPlayer.id, payload as PlayerInput)
       alert("✅ Jogador atualizado!")
       await reloadPlayers()
     } catch (e: any) {
@@ -304,13 +297,13 @@ export default function HomePage() {
         return alert('Mês inválido. Use formato "YYYY-MM" (ex: 2026-02).')
       }
 
-     await upsertMonthStats(selectedPlayer.id, {
-  monthId: mid,
-  overall: toNum(monthOverall),
-  jogos: toNum(monthJogos),
-  gols: toNum(monthGols),
-  assistencias: toNum(monthAssist),
-})
+      await upsertMonthStats(selectedPlayer.id, {
+        monthId: mid,
+        overall: toNum(monthOverall),
+        jogos: toNum(monthJogos),
+        gols: toNum(monthGols),
+        assistencias: toNum(monthAssist),
+      })
 
       alert("✅ Mês salvo!")
       await reloadMonths(selectedPlayer.id)
@@ -334,7 +327,6 @@ export default function HomePage() {
     }
   }
 
-  // ✅ Jogador troca a própria foto no HOME
   async function handleChangeFoto(e: React.ChangeEvent<HTMLInputElement>) {
     try {
       const file = e.target.files?.[0]
@@ -349,19 +341,15 @@ export default function HomePage() {
         fotoUrl: url,
       })
 
-      // atualiza sem recarregar a página
       setPlayer((prev: any) => (prev ? { ...prev, fotoUrl: url } : prev))
     } catch (err: any) {
       console.error(err)
       alert(err?.message || "❌ Não consegui trocar a foto. Veja o console.")
     } finally {
       setUploadingFoto(false)
-      // permite escolher o mesmo arquivo novamente se quiser
       e.target.value = ""
     }
   }
-
-  // ---------------- UI ----------------
 
   if (authLoading) {
     return (
@@ -374,7 +362,6 @@ export default function HomePage() {
     )
   }
 
-  // ✅ HOME ADMIN (Painel)
   if (admin) {
     return (
       <>
@@ -391,7 +378,6 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 grid lg:grid-cols-[0.9fr_1.1fr] gap-6">
-              {/* Lista */}
               <section className="rounded-3xl border border-white/10 bg-black/20 backdrop-blur p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -413,7 +399,7 @@ export default function HomePage() {
                   <div className="mt-4 text-slate-300">Nenhum jogador cadastrado ainda.</div>
                 ) : (
                   <div className="mt-4 space-y-2 max-h-[520px] overflow-auto pr-1">
-                    {players.map((p) => {
+                    {players.map((p: any) => {
                       const active = p.id === selectedId
                       return (
                         <button
@@ -434,7 +420,7 @@ export default function HomePage() {
                             {p.posicao || "—"} • {p.email || "—"}
                           </div>
                           <div className="text-white/45 text-xs mt-1">
-                            {p.jogos} jogos • {p.gols} gols • {p.assistencias} assist
+                            {p.jogos} jogos • {p.vitorias ?? 0} vitórias • {p.gols} gols • {p.assistencias} assist
                           </div>
                         </button>
                       )
@@ -443,7 +429,6 @@ export default function HomePage() {
                 )}
               </section>
 
-              {/* Editor */}
               <section className="rounded-3xl border border-white/10 bg-black/20 backdrop-blur p-6">
                 <div className="text-xs tracking-[0.28em] text-white/55">EDITOR</div>
                 <div className="text-2xl font-extrabold mt-1">
@@ -451,33 +436,34 @@ export default function HomePage() {
                 </div>
 
                 <div className="mt-5 grid sm:grid-cols-2 gap-3">
-                  <Field label="Nome" value={edit.nome} onChange={(v) => setEdit((s) => ({ ...s, nome: v }))} />
+                  <Field label="Nome" value={edit.nome} onChange={(v) => setEdit((s: any) => ({ ...s, nome: v }))} />
                   <Field
                     label="Email"
                     value={edit.email}
-                    onChange={(v) => setEdit((s) => ({ ...s, email: v }))}
+                    onChange={(v) => setEdit((s: any) => ({ ...s, email: v }))}
                     placeholder="ex: jogador@gmail.com"
                   />
                   <Field
                     label="Posição (GOL/ZAG/MEI/ATA)"
                     value={edit.posicao}
-                    onChange={(v) => setEdit((s) => ({ ...s, posicao: v }))}
+                    onChange={(v) => setEdit((s: any) => ({ ...s, posicao: v }))}
                     placeholder="MEI"
                   />
                   <Field
                     label="Característica"
                     value={edit.caracteristica}
-                    onChange={(v) => setEdit((s) => ({ ...s, caracteristica: v }))}
+                    onChange={(v) => setEdit((s: any) => ({ ...s, caracteristica: v }))}
                     placeholder="Armador / Xerife / Fazedor de gols..."
                   />
 
-                  <NumField label="Overall" value={edit.overall} onChange={(n) => setEdit((s) => ({ ...s, overall: n }))} />
-                  <NumField label="Jogos" value={edit.jogos} onChange={(n) => setEdit((s) => ({ ...s, jogos: n }))} />
-                  <NumField label="Gols" value={edit.gols} onChange={(n) => setEdit((s) => ({ ...s, gols: n }))} />
+                  <NumField label="Overall" value={edit.overall} onChange={(n) => setEdit((s: any) => ({ ...s, overall: n }))} />
+                  <NumField label="Jogos" value={edit.jogos} onChange={(n) => setEdit((s: any) => ({ ...s, jogos: n }))} />
+                  <NumField label="Vitórias" value={edit.vitorias ?? 0} onChange={(n) => setEdit((s: any) => ({ ...s, vitorias: n }))} />
+                  <NumField label="Gols" value={edit.gols} onChange={(n) => setEdit((s: any) => ({ ...s, gols: n }))} />
                   <NumField
                     label="Assistências"
                     value={edit.assistencias}
-                    onChange={(n) => setEdit((s) => ({ ...s, assistencias: n }))}
+                    onChange={(n) => setEdit((s: any) => ({ ...s, assistencias: n }))}
                   />
                 </div>
 
@@ -596,7 +582,6 @@ export default function HomePage() {
     )
   }
 
-  // ✅ HOME JOGADOR (CARD MELHORADO + FOTO GRANDE + TROCAR FOTO)
   const fotoUrl = (player as any)?.fotoUrl as string | undefined
 
   return (
@@ -625,15 +610,10 @@ export default function HomePage() {
               <div className="relative">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    {/* FOTO GRANDE */}
                     <div className="relative">
                       <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl border-4 border-emerald-400/60 bg-black/25 overflow-hidden shadow-[0_10px_40px_rgba(16,185,129,0.35)] flex items-center justify-center">
                         {fotoUrl ? (
-                          <img
-                            src={fotoUrl}
-                            alt={player.nome}
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={fotoUrl} alt={player.nome} className="w-full h-full object-cover" />
                         ) : (
                           <div className="text-4xl font-extrabold text-emerald-200">
                             {initials(player.nome)}
@@ -641,7 +621,6 @@ export default function HomePage() {
                         )}
                       </div>
 
-                      {/* BOTÃO TROCAR FOTO */}
                       <label
                         className={[
                           "absolute -bottom-3 left-1/2 -translate-x-1/2",
@@ -666,12 +645,11 @@ export default function HomePage() {
                     <div>
                       <div className="text-white font-extrabold text-2xl">{player.nome}</div>
                       <div className="text-white/55 text-sm mt-1">
-                        {player.posicao || "—"} • {player.caracteristica || "—"}
+                        {player.posicao || "—"} • {(player as any).caracteristica || "—"}
                       </div>
                     </div>
                   </div>
 
-                  {/* OVR MAIOR */}
                   <div className="text-right">
                     <div className="text-white/55 text-xs tracking-[0.25em] font-bold">OVR</div>
                     <div className="text-6xl sm:text-7xl font-extrabold text-emerald-300 leading-none">
@@ -680,8 +658,10 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="mt-8 grid grid-cols-3 gap-3">
+                {/* ✅ agora com vitórias */}
+                <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <StatCard label="Jogos" value={player.jogos ?? 0} />
+                  <StatCard label="Vitórias" value={(player as any).vitorias ?? 0} />
                   <StatCard label="Gols" value={player.gols ?? 0} />
                   <StatCard label="Assist" value={player.assistencias ?? 0} />
                 </div>

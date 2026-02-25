@@ -24,6 +24,7 @@ export type Player = {
   jogos: number
   gols: number
   assistencias: number
+  vitorias: number // ✅ NOVO
   fotoUrl?: string
 }
 
@@ -50,6 +51,7 @@ function mapDocToPlayer(doc0: any): Player {
     jogos: toNumber(d.jogos),
     gols: toNumber(d.gols),
     assistencias: toNumber(d.assistencias),
+    vitorias: toNumber(d.vitorias), // ✅ NOVO (se não existir vira 0)
     fotoUrl: d.fotoUrl ?? "",
   }
 }
@@ -81,6 +83,7 @@ export async function getPlayerById(id: string): Promise<Player | null> {
     jogos: toNumber(d.jogos),
     gols: toNumber(d.gols),
     assistencias: toNumber(d.assistencias),
+    vitorias: toNumber(d.vitorias), // ✅ NOVO
     fotoUrl: d.fotoUrl ?? "",
   }
 }
@@ -105,6 +108,7 @@ export async function createPlayer(input: PlayerInput): Promise<string> {
     jogos: toNumber(input.jogos),
     gols: toNumber(input.gols),
     assistencias: toNumber(input.assistencias),
+    vitorias: toNumber((input as any).vitorias), // ✅ NOVO
     fotoUrl: input.fotoUrl ?? "",
   }
 
@@ -126,6 +130,7 @@ export async function updatePlayer(id: string, input: PlayerInput): Promise<void
     jogos: toNumber(input.jogos),
     gols: toNumber(input.gols),
     assistencias: toNumber(input.assistencias),
+    vitorias: toNumber((input as any).vitorias), // ✅ NOVO
     fotoUrl: input.fotoUrl ?? "",
   }
   await updateDoc(ref, payload as any)
