@@ -304,12 +304,13 @@ export default function HomePage() {
         return alert('Mês inválido. Use formato "YYYY-MM" (ex: 2026-02).')
       }
 
-      await upsertMonthStats(selectedPlayer.id, mid, {
-        overall: toNum(monthOverall),
-        jogos: toNum(monthJogos),
-        gols: toNum(monthGols),
-        assistencias: toNum(monthAssist),
-      })
+     await upsertMonthStats(selectedPlayer.id, {
+  monthId: mid,
+  overall: toNum(monthOverall),
+  jogos: toNum(monthJogos),
+  gols: toNum(monthGols),
+  assistencias: toNum(monthAssist),
+})
 
       alert("✅ Mês salvo!")
       await reloadMonths(selectedPlayer.id)

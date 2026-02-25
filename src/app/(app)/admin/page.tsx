@@ -215,12 +215,12 @@ export default function AdminPage() {
     }
 
     try {
-      await upsertMonthStats(selectedPlayer.id, m, {
-        overall: monthOverall,
-        jogos: monthJogos,
-        gols: monthGols,
-        assistencias: monthAssists,
-      })
+      await upsertMonthStats(selectedPlayer.id, {
+  monthId,
+  overall: monthOverall,
+  jogos: monthJogos,
+  gols: monthGols,
+})
       await reloadMonths(selectedPlayer.id)
       alert("Mês salvo!")
     } catch (e) {
