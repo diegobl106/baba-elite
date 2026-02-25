@@ -1,11 +1,11 @@
 // src/lib/monthRankings.ts
 import { db } from "@/lib/firebase"
-import { collection, doc, getDoc, getDocs } from "firebase/firestore"
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore"
 import { Player } from "@/lib/players"
 
 export type MonthPlayerRow = {
   player: Player
-  monthId: string // YYYY-MM
+  monthId: string
   overall: number
   jogos: number
   gols: number
@@ -56,4 +56,30 @@ export async function listMonthRows(monthId: string): Promise<MonthPlayerRow[]> 
   }
 
   return rows
+}
+
+// ADICIONE ESTA FUNÇÃO
+export async function upsertMonthStats(
+  playerId: string,
+  monthId: string,
+  data: {
+    overall: number
+    jogos: number
+    gols: number
+    assistencias: number
+  }
+) {
+  const ref = doc(db, "players", playerId, "months", monthId)
+
+  await setDoc(
+    ref,
+    {
+      overall: data.overall ?? 0,
+      jogos: data.jogos ?? 0,
+      gols: data.gols ?? 0,
+      assistencias: data.assistencias ?? 0,
+      updatedAt: new Date(),
+    },
+    { merge: true }
+  )
 }
