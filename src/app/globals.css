@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* RESET TOTAL */
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #020617; /* slate-950 */
+  color: #e2e8f0;
+}
+
+/* REMOVE QUALQUER OVERLAY ACIDENTAL */
+body::before,
+body::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* GARANTE CLIQUE NORMAL */
+* {
+  pointer-events: auto;
+}
+
+/* REMOVE CAMADAS INVISÍVEIS */
+div[hidden] {
+  display: none !important;
+}
